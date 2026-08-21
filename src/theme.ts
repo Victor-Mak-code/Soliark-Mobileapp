@@ -4,6 +4,7 @@ export const colors = {
   oliveDark: '#5C6B32',
   cream: '#F6F3E8',
   creamDeep: '#EDE6D6',
+  drawer: '#E3D7C5',
   text: '#2C2C2C',
   textMuted: '#4A4A4A',
   orange: '#E4A44A',

@@ -1,13 +1,15 @@
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ComponentProps, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MenuDestination, NavigationMenu } from '../components/NavigationMenu';
 import { colors, spacing } from '../theme';
 
 type TabKey = 'home' | 'library' | 'create' | 'friends';
+type PageKey = TabKey | Exclude<MenuDestination, 'journals' | 'video' | 'collaboration'>;
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 type HomeScreenProps = {
@@ -17,14 +19,27 @@ type HomeScreenProps = {
 
 export function HomeScreen({ onReplayOnboarding, onSignOut }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<TabKey>('home');
+  const [page, setPage] = useState<PageKey>('home');
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const openMenu = () => {
-    Alert.alert('Menu', undefined, [
-      { text: 'Replay onboarding', onPress: onReplayOnboarding },
-      { text: 'Sign out', style: 'destructive', onPress: onSignOut },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+  const openTab = (next: TabKey) => {
+    setPage(next);
+  };
+
+  const openFromMenu = (destination: MenuDestination) => {
+    if (destination === 'journals') {
+      openTab('library');
+      return;
+    }
+    if (destination === 'video') {
+      openTab('create');
+      return;
+    }
+    if (destination === 'collaboration') {
+      openTab('friends');
+      return;
+    }
+    setPage(destination);
   };
 
   return (
@@ -37,13 +52,11 @@ export function HomeScreen({ onReplayOnboarding, onSignOut }: HomeScreenProps) {
 
       <View style={styles.header}>
         <View style={styles.brand}>
-          <View style={styles.logo}>
-            <Ionicons name="videocam-outline" size={16} color={colors.white} />
-          </View>
+          <Image source={require('../../assets/jv-icon.png')} style={styles.logo} />
           <Text style={styles.brandLabel}>JV</Text>
         </View>
         <Pressable
-          onPress={openMenu}
+          onPress={() => setMenuOpen(true)}
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel="Open menu"
@@ -53,10 +66,10 @@ export function HomeScreen({ onReplayOnboarding, onSignOut }: HomeScreenProps) {
       </View>
 
       <View style={styles.body}>
-        {tab === 'home' ? (
-          <HomeFeed onStartCreating={() => setTab('create')} />
+        {page === 'home' ? (
+          <HomeFeed onStartCreating={() => openTab('create')} />
         ) : (
-          <PlaceholderTab tab={tab} />
+          <PlaceholderTab page={page} />
         )}
       </View>
 
@@ -64,29 +77,29 @@ export function HomeScreen({ onReplayOnboarding, onSignOut }: HomeScreenProps) {
         <TabButton
           label="Home"
           icon="home"
-          active={tab === 'home'}
-          onPress={() => setTab('home')}
+          active={page === 'home'}
+          onPress={() => openTab('home')}
         />
         <TabButton
           label="My Library"
           icon="library-outline"
-          active={tab === 'library'}
-          onPress={() => setTab('library')}
+          active={page === 'library'}
+          onPress={() => openTab('library')}
         />
         <TabButton
           label="Create"
           icon="add"
-          active={tab === 'create'}
-          onPress={() => setTab('create')}
+          active={page === 'create'}
+          onPress={() => openTab('create')}
         />
         <TabButton
           label="Friends"
           icon="people-outline"
-          active={tab === 'friends'}
-          onPress={() => setTab('friends')}
+          active={page === 'friends'}
+          onPress={() => openTab('friends')}
         />
         <Pressable
-          onPress={() => setTab('create')}
+          onPress={() => openTab('create')}
           accessibilityRole="button"
           accessibilityLabel="Quick create"
           style={({ pressed }) => [styles.fab, { opacity: pressed ? 0.88 : 1 }]}
@@ -94,6 +107,14 @@ export function HomeScreen({ onReplayOnboarding, onSignOut }: HomeScreenProps) {
           <Ionicons name="sparkles" size={22} color={colors.white} />
         </Pressable>
       </View>
+
+      <NavigationMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onNavigate={openFromMenu}
+        onSignOut={onSignOut}
+        onReplayOnboarding={onReplayOnboarding}
+      />
     </View>
   );
 }
@@ -245,7 +266,7 @@ function StatCard({ value, label, color }: { value: string; label: string; color
   );
 }
 
-function PlaceholderTab({ tab }: { tab: Exclude<TabKey, 'home'> }) {
+function PlaceholderTab({ page }: { page: Exclude<PageKey, 'home'> }) {
   const copy = {
     library: {
       title: 'My Library',
@@ -259,7 +280,27 @@ function PlaceholderTab({ tab }: { tab: Exclude<TabKey, 'home'> }) {
       title: 'Friends',
       body: 'Share creations and collaborate with people you trust.',
     },
-  }[tab];
+    shared: {
+      title: 'Shared with Me',
+      body: 'Journals and videos others have shared with you will appear here.',
+    },
+    starred: {
+      title: 'Starred',
+      body: 'Save journals, storyboards, and videos here so they are easy to find later.',
+    },
+    storyboards: {
+      title: 'Storyboards',
+      body: 'Your generated storyboards will live here once you start creating.',
+    },
+    export: {
+      title: 'Export & Sharing',
+      body: 'Export finished videos and share them with friends and collaborators.',
+    },
+    notifications: {
+      title: 'Notifications',
+      body: 'Updates about shares, comments, and collaboration will show up here.',
+    },
+  }[page];
 
   return (
     <View style={styles.placeholder}>
@@ -334,9 +375,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: colors.oliveDark,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   brandLabel: {
     fontSize: 20,

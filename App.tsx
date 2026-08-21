@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { OnboardingScreen } from './src/onboarding/OnboardingScreen';
@@ -10,6 +11,7 @@ import { colors } from './src/theme';
 
 const ONBOARDING_KEY = '@journalvideo/onboarding-complete';
 const AUTH_KEY = '@journalvideo/auth-session';
+const SPLASH_MS = 1800;
 
 type Screen = 'onboarding' | 'login' | 'home';
 
@@ -20,17 +22,21 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    AsyncStorage.getItem(AUTH_KEY)
-      .then((authValue) => {
-        if (!cancelled) {
-          setScreen(authValue === 'true' ? 'home' : 'onboarding');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setReady(true);
-        }
-      });
+    const boot = async () => {
+      SplashScreen.hideAsync().catch(() => undefined);
+
+      const [authValue] = await Promise.all([
+        AsyncStorage.getItem(AUTH_KEY),
+        new Promise((resolve) => setTimeout(resolve, SPLASH_MS)),
+      ]);
+
+      if (!cancelled) {
+        setScreen(authValue === 'true' ? 'home' : 'onboarding');
+        setReady(true);
+      }
+    };
+
+    boot();
 
     return () => {
       cancelled = true;
@@ -60,7 +66,12 @@ export default function App() {
   if (!ready) {
     return (
       <View style={styles.boot}>
-        <ActivityIndicator color={colors.cream} />
+        <Image
+          source={require('./assets/jv-icon.png')}
+          style={styles.bootLogo}
+          resizeMode="cover"
+          accessibilityLabel="JournalVideo"
+        />
       </View>
     );
   }
@@ -84,5 +95,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.olive,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bootLogo: {
+    width: 148,
+    height: 148,
+    borderRadius: 32,
   },
 });

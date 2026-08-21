@@ -1,18 +1,21 @@
 {
   "expo": {
     "name": "JournalVideo",
-    "slug": "journal-app",
-    "version": "1.0.0",
+    "slug": "journalvideo",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/jv-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#73843F"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "icon": "./assets/jv-icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#73843F",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -22,10 +25,24 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#73843F"
+      }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#73843F",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
+        }
+      ]
     ]
   }
 }
