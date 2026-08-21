@@ -29,11 +29,14 @@ type OnboardingScreenProps = {
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const listRef = useRef<FlatList<(typeof SLIDES)[number]>>(null);
   const [index, setIndex] = useState(0);
 
+  const topPad = Math.max(insets.top, 12);
+  const bottomPad = Math.max(insets.bottom, 16);
   const cardWidth = Math.min(windowWidth - spacing.screen * 2, 440);
+  const cardHeight = Math.min(windowHeight - topPad - bottomPad - 48, 560);
   const isLast = index === SLIDES.length - 1;
 
   const goTo = (nextIndex: number) => {
@@ -57,9 +60,9 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   }).current;
 
   return (
-    <View style={[styles.screen, { paddingTop: Math.max(insets.top, 12) }]}>
+    <View style={[styles.screen, { paddingTop: topPad, paddingBottom: bottomPad }]}>
       <StatusBar style="light" />
-      <View style={[styles.cardWrap, { width: cardWidth, marginBottom: Math.max(insets.bottom, 16) }]}>
+      <View style={{ width: cardWidth, height: cardHeight }}>
         <View style={styles.card}>
           <FlatList
             ref={listRef}
@@ -171,17 +174,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardWrap: {
-    flex: 1,
-    maxHeight: 760,
-  },
   card: {
     flex: 1,
     backgroundColor: colors.cream,
     borderRadius: spacing.cardRadius,
     overflow: 'hidden',
-    paddingTop: 28,
-    paddingBottom: 18,
+    paddingTop: 20,
+    paddingBottom: 14,
   },
   carousel: {
     flex: 1,

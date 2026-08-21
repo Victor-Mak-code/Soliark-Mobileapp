@@ -13,7 +13,7 @@ type FilledIconCircleProps = {
 export function FilledIconCircle({
   name,
   backgroundColor,
-  size = 88,
+  size = 72,
 }: FilledIconCircleProps) {
   return (
     <View style={[styles.filled, { width: size, height: size, borderRadius: size / 2, backgroundColor }]}>

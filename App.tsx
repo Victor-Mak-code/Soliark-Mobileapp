@@ -5,21 +5,25 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { OnboardingScreen } from './src/onboarding/OnboardingScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
 import { colors } from './src/theme';
 
 const ONBOARDING_KEY = '@journalvideo/onboarding-complete';
+const AUTH_KEY = '@journalvideo/auth-session';
+
+type Screen = 'onboarding' | 'login' | 'home';
 
 export default function App() {
   const [ready, setReady] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [screen, setScreen] = useState<Screen>('onboarding');
 
   useEffect(() => {
     let cancelled = false;
 
-    AsyncStorage.getItem(ONBOARDING_KEY)
-      .then((value) => {
+    AsyncStorage.getItem(AUTH_KEY)
+      .then((authValue) => {
         if (!cancelled) {
-          setShowOnboarding(value !== 'true');
+          setScreen(authValue === 'true' ? 'home' : 'onboarding');
         }
       })
       .finally(() => {
@@ -35,12 +39,22 @@ export default function App() {
 
   const completeOnboarding = useCallback(async () => {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-    setShowOnboarding(false);
+    setScreen('login');
+  }, []);
+
+  const completeLogin = useCallback(async () => {
+    await AsyncStorage.setItem(AUTH_KEY, 'true');
+    setScreen('home');
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await AsyncStorage.removeItem(AUTH_KEY);
+    setScreen('login');
   }, []);
 
   const replayOnboarding = useCallback(async () => {
     await AsyncStorage.removeItem(ONBOARDING_KEY);
-    setShowOnboarding(true);
+    setScreen('onboarding');
   }, []);
 
   if (!ready) {
@@ -53,10 +67,12 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      {showOnboarding ? (
+      {screen === 'onboarding' ? (
         <OnboardingScreen onComplete={completeOnboarding} />
+      ) : screen === 'login' ? (
+        <LoginScreen onSuccess={completeLogin} />
       ) : (
-        <HomeScreen onReplayOnboarding={replayOnboarding} />
+        <HomeScreen onReplayOnboarding={replayOnboarding} onSignOut={signOut} />
       )}
     </SafeAreaProvider>
   );
