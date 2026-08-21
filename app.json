@@ -2,12 +2,12 @@
   "expo": {
     "name": "JournalVideo",
     "slug": "journalvideo",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "orientation": "portrait",
-    "icon": "./assets/jv-icon.png",
+    "icon": "./assets/jv-splash-md.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/jv-icon.png",
+      "image": "./assets/jv-splash-md.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -15,7 +15,7 @@
       "supportsTablet": true
     },
     "android": {
-      "icon": "./assets/jv-icon.png",
+      "icon": "./assets/jv-splash-md.png",
       "adaptiveIcon": {
         "backgroundColor": "#73843F",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -27,7 +27,7 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "splash": {
-        "image": "./assets/jv-icon.png",
+        "image": "./assets/jv-splash-md.png",
         "resizeMode": "contain",
         "backgroundColor": "#FFFFFF"
       }
@@ -38,8 +38,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
-          "image": "./assets/jv-icon.png",
-          "imageWidth": 80,
+          "image": "./assets/jv-splash-md.png",
+          "imageWidth": 72,
           "resizeMode": "contain"
         }
       ]
