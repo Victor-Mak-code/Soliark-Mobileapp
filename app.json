@@ -7,9 +7,9 @@
     "icon": "./assets/jv-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/jv-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#73843F"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true
@@ -27,9 +27,9 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "splash": {
-        "image": "./assets/splash-icon.png",
+        "image": "./assets/jv-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#73843F"
+        "backgroundColor": "#FFFFFF"
       }
     },
     "plugins": [
@@ -37,9 +37,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#73843F",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 180,
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/jv-icon.png",
+          "imageWidth": 80,
           "resizeMode": "contain"
         }
       ]
