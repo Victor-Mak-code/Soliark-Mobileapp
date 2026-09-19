@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "JournalVideo",
+    "name": "Soliark",
     "slug": "journalvideo",
     "version": "1.0.3",
     "orientation": "portrait",
@@ -17,7 +17,7 @@
     "android": {
       "icon": "./assets/jv-splash-md.png",
       "adaptiveIcon": {
-        "backgroundColor": "#73843F",
+        "backgroundColor": "#708238",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -41,6 +41,20 @@
           "image": "./assets/jv-splash-md.png",
           "imageWidth": 72,
           "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Soliark to record audio journals."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Soliark to access your photos for journal uploads.",
+          "cameraPermission": "Allow Soliark to take photos for journal uploads."
         }
       ]
     ]

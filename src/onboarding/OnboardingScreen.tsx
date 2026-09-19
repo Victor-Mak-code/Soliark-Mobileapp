@@ -61,7 +61,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
 
   return (
     <View style={[styles.screen, { paddingTop: topPad, paddingBottom: bottomPad }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <View style={{ width: cardWidth, height: cardHeight }}>
         <View style={styles.card}>
           <FlatList
@@ -170,17 +170,17 @@ function ActionButton({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.olive,
+    backgroundColor: colors.cream,
     alignItems: 'center',
     justifyContent: 'center',
   },
   card: {
     flex: 1,
     backgroundColor: colors.cream,
-    borderRadius: spacing.cardRadius,
     overflow: 'hidden',
     paddingTop: 20,
     paddingBottom: 14,
+    width: '100%',
   },
   carousel: {
     flex: 1,

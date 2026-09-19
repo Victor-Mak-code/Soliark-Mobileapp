@@ -1,63 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { NavigationProvider } from './src/navigation';
 import { OnboardingScreen } from './src/onboarding/OnboardingScreen';
-import { HomeScreen } from './src/screens/HomeScreen';
-import { LoginScreen } from './src/screens/LoginScreen';
+import { AuthScreen } from './src/screens/auth/AuthScreen';
+import { DashboardScreen } from './src/screens/DashboardScreen';
 import { colors } from './src/theme';
 
 const ONBOARDING_KEY = '@journalvideo/onboarding-complete';
-const AUTH_KEY = '@journalvideo/auth-session';
 
-type Screen = 'onboarding' | 'login' | 'home';
-
-export default function App() {
-  const [ready, setReady] = useState(false);
-  const [screen, setScreen] = useState<Screen>('onboarding');
+function Root() {
+  const { status } = useAuth();
+  const [onboarding, setOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    AsyncStorage.getItem(AUTH_KEY)
-      .then((authValue) => {
-        if (!cancelled) {
-          setScreen(authValue === 'true' ? 'home' : 'onboarding');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setReady(true);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
+      setOnboarding(value !== 'true');
+    });
   }, []);
 
-  const completeOnboarding = useCallback(async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-    setScreen('login');
-  }, []);
-
-  const completeLogin = useCallback(async () => {
-    await AsyncStorage.setItem(AUTH_KEY, 'true');
-    setScreen('home');
-  }, []);
-
-  const signOut = useCallback(async () => {
-    await AsyncStorage.removeItem(AUTH_KEY);
-    setScreen('login');
-  }, []);
-
-  const replayOnboarding = useCallback(async () => {
-    await AsyncStorage.removeItem(ONBOARDING_KEY);
-    setScreen('onboarding');
-  }, []);
-
-  if (!ready) {
+  if (status === 'loading' || onboarding === null) {
     return (
       <View style={styles.boot}>
         <ActivityIndicator color={colors.olive} />
@@ -65,15 +30,39 @@ export default function App() {
     );
   }
 
+  if (onboarding) {
+    return (
+      <OnboardingScreen
+        onComplete={async () => {
+          await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+          setOnboarding(false);
+        }}
+      />
+    );
+  }
+
+  if (status !== 'authenticated') {
+    return <AuthScreen />;
+  }
+
+  return (
+    <NavigationProvider>
+      <DashboardScreen
+        onReplayOnboarding={async () => {
+          await AsyncStorage.removeItem(ONBOARDING_KEY);
+          setOnboarding(true);
+        }}
+      />
+    </NavigationProvider>
+  );
+}
+
+export default function App() {
   return (
     <SafeAreaProvider>
-      {screen === 'onboarding' ? (
-        <OnboardingScreen onComplete={completeOnboarding} />
-      ) : screen === 'login' ? (
-        <LoginScreen onSuccess={completeLogin} />
-      ) : (
-        <HomeScreen onReplayOnboarding={replayOnboarding} onSignOut={signOut} />
-      )}
+      <AuthProvider>
+        <Root />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
@@ -81,7 +70,7 @@ export default function App() {
 const styles = StyleSheet.create({
   boot: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cream,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f5f5f0;
+  --foreground: #1c1917;
+  --card: #ffffff;
+  --muted: #78716c;
+  --border: #e7e5e4;
+  --sidebar: #ffffff;
+  --chip: #ece5d8;
+  --primary-color: rgb(112, 130, 56);
+  --secondary-color: rgb(230, 168, 77);
+  color-scheme: light;
+}
+
+html.dark {
+  --background: #171412;
+  --foreground: #f5f0e6;
+  --card: #1c1917;
+  --muted: #a8a29a;
+  --border: #44403c;
+  --sidebar: #1c1917;
+  --chip: #292524;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-sidebar: var(--sidebar);
+  --color-chip: var(--chip);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * Scoped design system for the new Ideas/Brainstorm pages (Figma prototype
+ * palette). Wrap a page's root content in className="theme-ideas" to opt in.
+ * Deliberately NOT merged into :root — the rest of the app keeps its
+ * existing olive/tan theme until a dedicated re-theme phase.
+ */
+.theme-ideas {
+  --ideas-bg: #f4f2fb;
+  --ideas-card: #ffffff;
+  --ideas-card2: #f7f5fd;
+  --ideas-border: rgba(124, 111, 255, 0.18);
+  --ideas-purple: #6a5cf0;
+  --ideas-purple-dim: rgba(124, 111, 255, 0.12);
+  --ideas-coral: #ff6b35;
+  --ideas-teal: #2ba39a;
+  --ideas-yellow: #b3941f;
+  --ideas-pink: #d6559b;
+  --ideas-green: #2f9e56;
+  --ideas-text: #1c1a24;
+  --ideas-muted: #6b6780;
+  --font-display: var(--font-ideas-display), var(--font-sans);
+  --font-body: var(--font-ideas-sans), var(--font-sans);
+  --font-ideas-monospace: var(--font-ideas-mono), var(--font-mono);
+  background: var(--ideas-bg);
+  color: var(--ideas-text);
+  font-family: var(--font-body);
+}
+
+:root:not([data-theme="light"]) .theme-ideas,
+html.dark .theme-ideas {
+  --ideas-bg: #0d0c10;
+  --ideas-card: #17151c;
+  --ideas-card2: #1e1b26;
+  --ideas-border: rgba(124, 111, 255, 0.16);
+  --ideas-purple: #7c6fff;
+  --ideas-purple-dim: rgba(124, 111, 255, 0.15);
+  --ideas-coral: #ff6b35;
+  --ideas-teal: #4ecdc4;
+  --ideas-yellow: #ffe566;
+  --ideas-pink: #ff85c2;
+  --ideas-green: #7fdb97;
+  --ideas-text: #f0eeff;
+  --ideas-muted: #8b87a0;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+html.dark body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+html.dark [class~="bg-white"] {
+  background-color: var(--card);
+}
+
+html.dark [class~="bg-[#f5f5f0]"],
+html.dark [class~="bg-[#f5f0e6]"],
+html.dark [class~="bg-[#efe9dc]"],
+html.dark [class~="bg-[#ece5d8]"],
+html.dark [class~="bg-[#e8dcc8]"],
+html.dark [class~="bg-[#f8f4ec]"],
+html.dark [class~="bg-[#f3ead9]"],
+html.dark [class~="bg-gray-50"],
+html.dark [class~="bg-gray-100"] {
+  background-color: var(--chip);
+}
+
+html.dark [class~="bg-gray-200"],
+html.dark [class~="bg-stone-200"] {
+  background-color: #44403c;
+}
+
+html.dark [class~="text-gray-800"],
+html.dark [class~="text-gray-900"],
+html.dark [class~="text-stone-800"] {
+  color: var(--foreground);
+}
+
+html.dark [class~="text-gray-600"],
+html.dark [class~="text-gray-700"],
+html.dark [class~="text-stone-600"],
+html.dark [class~="text-stone-700"] {
+  color: #d6d3d1;
+}
+
+html.dark [class~="text-gray-500"],
+html.dark [class~="text-stone-500"],
+html.dark [class~="text-gray-400"],
+html.dark [class~="text-stone-400"] {
+  color: var(--muted);
+}
+
+html.dark [class~="border-gray-100"],
+html.dark [class~="border-gray-200"],
+html.dark [class~="border-gray-300"],
+html.dark [class~="border-stone-200"] {
+  border-color: var(--border);
+}
+
+html.dark [class~="hover:bg-gray-50"]:hover,
+html.dark [class~="hover:bg-gray-100"]:hover,
+html.dark [class~="hover:bg-[#f5f0e6]"]:hover,
+html.dark [class~="hover:bg-[#efe9dc]"]:hover,
+html.dark [class~="hover:bg-[#eee2cc]"]:hover {
+  background-color: var(--chip);
+}
+
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark textarea,
+html.dark select {
+  background-color: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+/* TipTap write-up editor / viewer */
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror img.writeup-image,
+img.writeup-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0;
+  border-radius: 0.5rem;
+}
+
+.ProseMirror video.writeup-video,
+video.writeup-video {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  margin: 0.75rem 0;
+  border-radius: 0.5rem;
+  background: #000;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
