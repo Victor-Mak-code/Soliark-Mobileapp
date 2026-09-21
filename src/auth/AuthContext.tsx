@@ -11,7 +11,6 @@ import {
 
 import {
   getCurrentUser,
-  guestLogin,
   login,
   logout as apiLogout,
   signup,
@@ -20,7 +19,7 @@ import {
   type LoginData,
   type SignupData,
 } from '../api';
-import { persistSessionCookie } from '../api/client';
+import { getSessionCookie, persistSessionCookie } from '../api/client';
 
 const USER_KEY = '@soliark/current-user';
 
@@ -32,7 +31,6 @@ type AuthContextValue = {
   refreshUser: () => Promise<CurrentUser | null>;
   signIn: (data: LoginData) => Promise<{ requiresVerification?: boolean; email?: string }>;
   signUp: (data: SignupData) => Promise<{ email: string }>;
-  signInAsGuest: () => Promise<void>;
   confirmOtp: (email: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -64,17 +62,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const cached = await AsyncStorage.getItem(USER_KEY);
-        if (cached && !cancelled) {
-          setUser(JSON.parse(cached) as CurrentUser);
+        const [cached, cookie] = await Promise.all([
+          AsyncStorage.getItem(USER_KEY),
+          getSessionCookie(),
+        ]);
+        if (cancelled) return;
+
+        if (!cookie) {
+          if (cached) await AsyncStorage.removeItem(USER_KEY);
+          setUser(null);
+          setStatus('unauthenticated');
+          return;
         }
+
+        if (cached) {
+          try {
+            setUser(JSON.parse(cached) as CurrentUser);
+            setStatus('authenticated');
+          } catch {
+            // ignore invalid cache and wait for /me
+          }
+        }
+
         const next = await getCurrentUser();
         if (!cancelled) {
           await applyUser(next);
         }
       } catch {
         if (!cancelled) {
-          setStatus('unauthenticated');
+          setStatus((prev) => (prev === 'authenticated' ? prev : 'unauthenticated'));
         }
       }
     })();
@@ -99,11 +115,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signup(data);
     return { email: result.email || data.email };
   }, []);
-
-  const signInAsGuest = useCallback(async () => {
-    await guestLogin();
-    await refreshUser();
-  }, [refreshUser]);
 
   const confirmOtp = useCallback(
     async (email: string, code: string) => {
@@ -130,11 +141,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       signIn,
       signUp,
-      signInAsGuest,
       confirmOtp,
       signOut,
     }),
-    [status, user, refreshUser, signIn, signUp, signInAsGuest, confirmOtp, signOut]
+    [status, user, refreshUser, signIn, signUp, confirmOtp, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ComponentProps, ReactNode } from 'react';
+import { ComponentProps, ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -125,16 +125,75 @@ export function IconButton({
 
 export function TextField({
   label,
+  onFocus,
+  onBlur,
+  secureTextEntry,
+  keyboardType,
+  autoComplete,
+  textContentType,
+  style,
   ...props
 }: TextInputProps & { label?: string }) {
+  const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(true);
+  const isPassword = Boolean(secureTextEntry);
+  const isEmail =
+    keyboardType === 'email-address' ||
+    autoComplete === 'email' ||
+    textContentType === 'emailAddress' ||
+    (typeof label === 'string' && /email/i.test(label));
+  const leadingIcon = isPassword ? 'lock-closed-outline' : isEmail ? 'mail-outline' : null;
+
   return (
     <View style={styles.field}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
-      <TextInput
-        placeholderTextColor={colors.placeholder}
-        {...props}
-        style={[styles.input, props.multiline && styles.inputMultiline, props.style]}
-      />
+      <View style={[styles.inputWrap, focused && styles.inputFocused]}>
+        {leadingIcon ? (
+          <Ionicons
+            name={leadingIcon}
+            size={18}
+            color={focused ? colors.olive : colors.placeholder}
+            style={styles.inputLeadingIcon}
+          />
+        ) : null}
+        <TextInput
+          placeholderTextColor={colors.placeholder}
+          {...props}
+          keyboardType={keyboardType}
+          autoComplete={autoComplete}
+          textContentType={textContentType}
+          secureTextEntry={isPassword ? hidden : false}
+          onFocus={(event) => {
+            setFocused(true);
+            onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            onBlur?.(event);
+          }}
+          style={[
+            styles.input,
+            leadingIcon && styles.inputWithIcons,
+            props.multiline && styles.inputMultiline,
+            style,
+          ]}
+        />
+        {isPassword ? (
+          <Pressable
+            onPress={() => setHidden((value) => !value)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
+            style={styles.inputIconBtn}
+          >
+            <Ionicons
+              name={hidden ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={colors.textMuted}
+            />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -354,13 +413,35 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.2,
   },
-  input: {
-    backgroundColor: colors.cream,
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: '#C9C4B8',
     borderRadius: radii.md,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: 'transparent',
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: type.body,
     color: colors.text,
+  },
+  inputWithIcons: {
+    paddingHorizontal: 8,
+  },
+  inputLeadingIcon: {
+    marginLeft: 12,
+  },
+  inputIconBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  inputFocused: {
+    borderColor: colors.olive,
+    backgroundColor: colors.white,
   },
   inputMultiline: {
     minHeight: 140,

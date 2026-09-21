@@ -171,7 +171,9 @@ const styles = StyleSheet.create({
   done: { color: colors.olive, fontWeight: '700', fontSize: 16 },
   sub: { marginTop: 4, marginBottom: 12, color: colors.textMuted, fontSize: 13 },
   search: {
-    backgroundColor: colors.cream,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: '#C9C4B8',
     borderRadius: radii.md,
     paddingHorizontal: 14,
     paddingVertical: 12,

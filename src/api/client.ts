@@ -12,6 +12,10 @@ function normalizeApiHost(host?: string): string {
 
 export const API_BASE_URL = normalizeApiHost(process.env.EXPO_PUBLIC_API_HOST);
 
+const REQUEST_TIMEOUT_MS = 30000;
+const UPLOAD_TIMEOUT_MS = 120000;
+const RETRY_DELAY_MS = 600;
+
 function apiUrl(path: string): string {
   const suffix = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE_URL}${suffix}`;
@@ -71,7 +75,52 @@ function captureSetCookie(response: Response) {
   }
 }
 
-export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+function mergeAbortSignal(timeoutMs: number, external?: AbortSignal | null) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  return {
+    signal: controller.signal,
+    dispose: () => clearTimeout(timer),
+  };
+}
+
+function messageForStatus(status: number): string {
+  if (status === 401 || status === 403) return 'Please sign in again.';
+  if (status === 404) return 'This feature is not available yet.';
+  if (status >= 500) return 'Server error. Please try again.';
+  return 'Unexpected response from server.';
+}
+
+export async function parseApiJson<T = any>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return {} as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return { message: messageForStatus(response.status) } as T;
+  }
+}
+
+function isRetryableNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.name === 'AbortError') return true;
+  const message = err.message.toLowerCase();
+  return (
+    message.includes('network') ||
+    message.includes('timed out') ||
+    message.includes('timeout') ||
+    message.includes('failed to fetch') ||
+    message.includes('connection')
+  );
+}
+
+async function fetchWithTimeout(path: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const cookie = await getSessionCookie();
   const headers = new Headers(init.headers);
 
@@ -84,14 +133,41 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(apiUrl(path), {
-    ...init,
-    headers,
-    credentials: 'include',
-  });
+  const { signal, dispose } = mergeAbortSignal(timeoutMs, init.signal);
 
-  captureSetCookie(response);
-  return response;
+  try {
+    const response = await fetch(apiUrl(path), {
+      ...init,
+      headers,
+      credentials: 'include',
+      signal,
+    });
+    captureSetCookie(response);
+    return response;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Request timed out. Check your connection and try again.');
+    }
+    throw err;
+  } finally {
+    dispose();
+  }
+}
+
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const method = (init.method || 'GET').toUpperCase();
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+  const timeoutMs = isFormData ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+
+  try {
+    return await fetchWithTimeout(path, init, timeoutMs);
+  } catch (err) {
+    if (method !== 'GET' || !isRetryableNetworkError(err)) {
+      throw err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    return fetchWithTimeout(path, init, timeoutMs);
+  }
 }
 
 export type UploadFile = {

@@ -1,4 +1,5 @@
-import { API_BASE_URL, apiFetch, appendUploadFile, type UploadFile } from './client';
+import { Platform } from 'react-native';
+import { API_BASE_URL, apiFetch, appendUploadFile, getSessionCookie, parseApiJson, type UploadFile } from './client';
 
 export { API_BASE_URL, type UploadFile } from './client';
 
@@ -46,7 +47,7 @@ export async function login(data: LoginData): Promise<AuthResponse> {
     body: JSON.stringify(data),
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
 
   if (response.status === 403 && result.requiresVerification) {
     return result;
@@ -68,7 +69,7 @@ export async function signup(data: SignupData): Promise<AuthResponse> {
     body: JSON.stringify(data),
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
 
   if (!response.ok) {
     throw new Error(result.message || 'Signup failed');
@@ -85,7 +86,7 @@ export async function guestLogin(): Promise<AuthResponse> {
     },
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
 
   if (!response.ok) {
     throw new Error(result.message || 'Failed to start guest session');
@@ -103,7 +104,7 @@ export async function verifyOtp(email: string, code: string): Promise<AuthRespon
     body: JSON.stringify({ email, code }),
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
 
   if (!response.ok) {
     throw new Error(result.message || 'Invalid or expired code');
@@ -121,7 +122,7 @@ export async function resendOtp(email: string): Promise<AuthResponse> {
     body: JSON.stringify({ email }),
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
 
   if (!response.ok) {
     throw new Error(result.message || 'Failed to resend code');
@@ -136,7 +137,7 @@ export async function forgotPassword(email: string): Promise<AuthResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Unable to send reset code');
   }
@@ -149,7 +150,7 @@ export async function resendResetOtp(email: string): Promise<AuthResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to resend code');
   }
@@ -165,7 +166,7 @@ export async function verifyResetOtp(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Invalid or expired code');
   }
@@ -186,7 +187,7 @@ export async function resetPassword(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, resetToken, newPassword }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Unable to reset password');
   }
@@ -202,7 +203,7 @@ export async function changePassword(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ currentPassword, newPassword }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Unable to update password');
   }
@@ -218,7 +219,7 @@ export async function requestEmailChange(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password, newEmail }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Unable to change email');
   }
@@ -230,7 +231,7 @@ export async function resendEmailChangeOtp(): Promise<AuthResponse> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to resend code');
   }
@@ -243,7 +244,7 @@ export async function confirmEmailChange(code: string): Promise<AuthResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Invalid or expired code');
   }
@@ -267,11 +268,15 @@ export interface CurrentUserResponse {
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
+  if (Platform.OS !== 'web') {
+    const cookie = await getSessionCookie();
+    if (!cookie) return null;
+  }
   const response = await apiFetch(`/api/auth/me`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result: CurrentUserResponse = await response.json();
+  const result: CurrentUserResponse = await parseApiJson(response);
   if (response.status === 401) {
     return null;
   }
@@ -287,7 +292,7 @@ export async function logout(): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
   });
   if (!response.ok) {
-    const result = await response.json().catch(() => ({}));
+    const result = await parseApiJson(response);
     throw new Error((result as { message?: string }).message || 'Failed to sign out');
   }
 }
@@ -339,7 +344,7 @@ export async function createJournal(data: CreateJournalData): Promise<JournalRes
     body: JSON.stringify(data),
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to create journal');
@@ -356,7 +361,7 @@ export async function getJournals(): Promise<JournalResponse> {
     },
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch journals');
@@ -373,7 +378,7 @@ export async function getJournal(id: string): Promise<JournalResponse> {
     },
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch journal');
@@ -391,7 +396,7 @@ export async function updateJournal(id: string, data: UpdateJournalData): Promis
     body: JSON.stringify(data),
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to update journal');
@@ -408,7 +413,7 @@ export async function deleteJournal(id: string): Promise<JournalResponse> {
     },
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to delete journal');
@@ -474,7 +479,7 @@ export async function generateJournalVideo(
         body: JSON.stringify(body),
     }
   );
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to start video generation');
   }
@@ -490,7 +495,7 @@ export async function getVideoGenerationById(
       headers: { 'Content-Type': 'application/json' },
       }
   );
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch video generation status');
   }
@@ -506,7 +511,7 @@ export async function getJournalVideoGeneration(
       headers: { 'Content-Type': 'application/json' },
       }
   );
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch video generation status');
   }
@@ -534,7 +539,7 @@ export async function uploadImage(file: UploadFile, title?: string): Promise<Upl
     body: formData,
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to upload image');
@@ -555,7 +560,7 @@ export async function uploadDocument(file: UploadFile, title?: string): Promise<
     body: formData,
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to upload document');
@@ -576,7 +581,7 @@ export async function uploadAudio(file: UploadFile, title?: string): Promise<Upl
     body: formData,
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
   
   if (!response.ok) {
     throw new Error(result.message || 'Failed to upload audio');
@@ -610,7 +615,7 @@ export async function uploadAsset(
     body: formData,
   });
 
-  const result = await response.json();
+  const result = await parseApiJson(response);
 
   if (!response.ok) {
     throw new Error(result.message || 'Failed to upload asset');
@@ -662,7 +667,7 @@ export async function getFriends(): Promise<FriendsResponse> {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch friends');
   }
@@ -674,7 +679,7 @@ export async function getPendingInvitations(): Promise<PendingResponse> {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch pending invitations');
   }
@@ -687,7 +692,7 @@ export async function inviteFriend(email: string): Promise<GenericMessageRespons
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email.trim() }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to send invite');
   }
@@ -699,7 +704,7 @@ export async function acceptFriendRequest(id: string): Promise<GenericMessageRes
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to accept request');
   }
@@ -711,7 +716,7 @@ export async function rejectFriendRequest(id: string): Promise<GenericMessageRes
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to reject request');
   }
@@ -723,7 +728,7 @@ export async function removeFriend(id: string): Promise<GenericMessageResponse> 
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to remove friend');
   }
@@ -735,7 +740,7 @@ export async function blockFriend(id: string): Promise<GenericMessageResponse> {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to block friend');
   }
@@ -792,7 +797,7 @@ export async function getSharedWithMe(): Promise<SharedListResponse> {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch shared journals');
   }
@@ -804,7 +809,7 @@ export async function getSharedItem(shareId: string): Promise<SharedItemResponse
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch shared item');
   }
@@ -821,7 +826,7 @@ export async function shareJournal(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ journalId, sharedWithUserId, contributorRole }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to share journal');
   }
@@ -833,7 +838,7 @@ export async function removeShared(shareId: string): Promise<GenericMessageRespo
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to remove share');
   }
@@ -845,7 +850,7 @@ export async function toggleSharedStar(shareId: string): Promise<SharedItemRespo
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to toggle star');
   }
@@ -903,7 +908,7 @@ export async function getNotifications(
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch notifications');
   }
@@ -915,7 +920,7 @@ export async function getUnreadNotificationsCount(): Promise<number> {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (response.status === 401 || !response.ok) {
     return 0;
   }
@@ -927,7 +932,7 @@ export async function markNotificationRead(id: string): Promise<GenericMessageRe
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to mark as read');
   }
@@ -939,7 +944,7 @@ export async function markAllNotificationsRead(): Promise<GenericMessageResponse
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to mark all as read');
   }
@@ -951,7 +956,7 @@ export async function deleteNotification(id: string): Promise<GenericMessageResp
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to delete notification');
   }
@@ -991,7 +996,7 @@ export async function getCollaborationJournals(): Promise<CollaborationListRespo
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch collaboration journals');
   }
@@ -1003,7 +1008,7 @@ export async function getCollaborators(journalId: string): Promise<Collaborators
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch collaborators');
   }
@@ -1030,7 +1035,7 @@ export async function getComments(journalId: string): Promise<CommentsResponse> 
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch comments');
   }
@@ -1046,7 +1051,7 @@ export async function createComment(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: content.trim() }),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to add comment');
   }
@@ -1064,7 +1069,7 @@ export async function searchUniversities(query: string): Promise<UniversityItem[
   const response = await apiFetch(`/api/universities?query=${encodeURIComponent(query)}`,
     { method: 'GET', headers: { 'Content-Type': 'application/json' } }
   );
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to search universities');
   }
@@ -1124,7 +1129,7 @@ export async function getIdeas(filters?: {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch ideas');
   }
@@ -1136,7 +1141,7 @@ export async function getIdea(id: string): Promise<IdeaListItem> {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch idea');
   }
@@ -1149,7 +1154,7 @@ export async function createIdea(data: CreateIdeaData): Promise<IdeaListItem> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to create idea');
   }
@@ -1161,7 +1166,7 @@ export async function applyToRole(ideaId: string, roleIndex: number): Promise<Ge
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to apply to role');
   }
@@ -1173,7 +1178,7 @@ export async function getIdeaApplications(ideaId: string): Promise<IdeaApplicati
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch applications');
   }
@@ -1185,7 +1190,7 @@ export async function acceptIdeaApplication(appId: string): Promise<GenericMessa
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to accept application');
   }
@@ -1197,7 +1202,7 @@ export async function rejectIdeaApplication(appId: string): Promise<GenericMessa
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to reject application');
   }
@@ -1242,11 +1247,14 @@ export async function getBrainstormSpaces(): Promise<BrainstormSpace[]> {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
+  if (response.status === 404) {
+    return [];
+  }
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch brainstorm spaces');
   }
-  return result.data || [];
+  return Array.isArray(result.data) ? result.data : [];
 }
 
 export async function createBrainstormSpace(data: {
@@ -1258,7 +1266,7 @@ export async function createBrainstormSpace(data: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to create space');
   }
@@ -1272,11 +1280,14 @@ export async function getBrainstormSpace(
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch space');
   }
-  return result.data;
+  return {
+    space: result.data?.space ?? result.data,
+    entries: Array.isArray(result.data?.entries) ? result.data.entries : [],
+  };
 }
 
 export async function addBrainstormEntry(
@@ -1288,7 +1299,7 @@ export async function addBrainstormEntry(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to add entry');
   }
@@ -1302,7 +1313,7 @@ export async function generateBrainstormEntryVideo(
   const response = await apiFetch(`/api/brainstorm/${spaceId}/entries/${entryId}/generate-video`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' } }
   );
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to start video generation');
   }
@@ -1316,7 +1327,7 @@ export async function getBrainstormVideoJob(
   const response = await apiFetch(`/api/brainstorm/${spaceId}/video-generations/${jobId}`,
     { method: 'GET', headers: { 'Content-Type': 'application/json' } }
   );
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to fetch video job');
   }
@@ -1330,7 +1341,7 @@ export async function voteBrainstormEntry(
   const response = await apiFetch(`/api/brainstorm/${spaceId}/entries/${entryId}/vote`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' } }
   );
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to vote');
   }
@@ -1346,7 +1357,7 @@ export async function promoteBrainstormSpaceToIdea(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  const result = await response.json();
+  const result = await parseApiJson(response);
   if (!response.ok) {
     throw new Error(result.message || 'Failed to promote to idea');
   }

@@ -219,9 +219,19 @@ export function BrainstormScreen() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const [spaceData, friendsRes] = await Promise.all([getBrainstormSpaces(), getFriends()]);
-    setSpaces(spaceData);
-    setFriends(friendsRes.data || []);
+    try {
+      const spaceData = await getBrainstormSpaces();
+      setSpaces(Array.isArray(spaceData) ? spaceData : []);
+    } catch (err) {
+      setSpaces([]);
+      setError(err instanceof Error ? err.message : 'Failed to load spaces');
+    }
+    try {
+      const friendsRes = await getFriends();
+      setFriends(friendsRes.data || []);
+    } catch {
+      setFriends([]);
+    }
   };
 
   useEffect(() => {
@@ -268,7 +278,7 @@ export function BrainstormScreen() {
       {spaces.map((space) => (
         <Pressable key={space._id} onPress={() => push({ name: 'brainstorm-space', id: space._id })} style={styles.card}>
           <Text style={styles.title}>{space.title}</Text>
-          <Text style={styles.meta}>{space.memberIds.length} members</Text>
+          <Text style={styles.meta}>{(space.memberIds?.length ?? 0)} members</Text>
         </Pressable>
       ))}
     </ScrollView>
@@ -290,8 +300,8 @@ export function BrainstormSpaceScreen({ id }: { id: string }) {
 
   const load = async () => {
     const data = await getBrainstormSpace(id);
-    setSpace(data.space);
-    setEntries(data.entries);
+    setSpace(data?.space ?? null);
+    setEntries(Array.isArray(data?.entries) ? data.entries : []);
   };
 
   useEffect(() => {
@@ -418,7 +428,7 @@ export function BrainstormSpaceScreen({ id }: { id: string }) {
         const url = entry.type !== 'text' ? getFileUrl(entry.content) : null;
         return (
           <View key={entry._id} style={styles.card}>
-            <Text style={styles.meta}>{entry.author.firstName} {entry.author.lastName} · {entry.type}</Text>
+            <Text style={styles.meta}>{entry.author?.firstName} {entry.author?.lastName} · {entry.type}</Text>
             {entry.type === 'text' ? <Text style={styles.body}>{entry.content}</Text> : null}
             {entry.type === 'image' && url ? <Image source={{ uri: url }} style={styles.media} /> : null}
             {(entry.type === 'video' || entry.type === 'ai_video') && url ? (

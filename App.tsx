@@ -1,28 +1,35 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
-import { NavigationProvider } from './src/navigation';
 import { OnboardingScreen } from './src/onboarding/OnboardingScreen';
 import { AuthScreen } from './src/screens/auth/AuthScreen';
-import { DashboardScreen } from './src/screens/DashboardScreen';
 import { colors } from './src/theme';
 
-const ONBOARDING_KEY = '@journalvideo/onboarding-complete';
+type DashboardProps = { onReplayOnboarding: () => void };
+
+function AuthenticatedApp({ onReplayOnboarding }: DashboardProps) {
+  const { NavigationProvider } = require('./src/navigation') as typeof import('./src/navigation');
+  const { DashboardScreen } = require('./src/screens/DashboardScreen') as {
+    DashboardScreen: ComponentType<DashboardProps>;
+  };
+  return (
+    <NavigationProvider>
+      <DashboardScreen onReplayOnboarding={onReplayOnboarding} />
+    </NavigationProvider>
+  );
+}
 
 function Root() {
   const { status } = useAuth();
-  const [onboarding, setOnboarding] = useState<boolean | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(true);
 
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
-      setOnboarding(value !== 'true');
-    });
-  }, []);
+  if (showOnboarding) {
+    return <OnboardingScreen onComplete={() => setShowOnboarding(false)} />;
+  }
 
-  if (status === 'loading' || onboarding === null) {
+  if (status === 'loading') {
     return (
       <View style={styles.boot}>
         <ActivityIndicator color={colors.olive} />
@@ -30,31 +37,11 @@ function Root() {
     );
   }
 
-  if (onboarding) {
-    return (
-      <OnboardingScreen
-        onComplete={async () => {
-          await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-          setOnboarding(false);
-        }}
-      />
-    );
+  if (status === 'authenticated') {
+    return <AuthenticatedApp onReplayOnboarding={() => setShowOnboarding(true)} />;
   }
 
-  if (status !== 'authenticated') {
-    return <AuthScreen />;
-  }
-
-  return (
-    <NavigationProvider>
-      <DashboardScreen
-        onReplayOnboarding={async () => {
-          await AsyncStorage.removeItem(ONBOARDING_KEY);
-          setOnboarding(true);
-        }}
-      />
-    </NavigationProvider>
-  );
+  return <AuthScreen />;
 }
 
 export default function App() {

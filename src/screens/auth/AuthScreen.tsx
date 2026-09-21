@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  AppState,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,12 +19,10 @@ import {
   resendOtp,
   resendResetOtp,
   resetPassword,
-  searchUniversities,
   verifyResetOtp,
-  type UniversityItem,
 } from '../../api';
 import { useAuth } from '../../auth/AuthContext';
-import { Banner, OutlineButton, PrimaryButton, TextField } from '../../components/ui';
+import { Banner, PrimaryButton, TextField } from '../../components/ui';
 import { colors } from '../../theme';
 
 type AuthView = 'login' | 'signup' | 'verify' | 'forgot' | 'reset-verify' | 'reset';
@@ -32,38 +32,18 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function AuthScreen() {
   const insets = useSafeAreaInsets();
-  const { signIn, signUp, signInAsGuest, confirmOtp } = useAuth();
+  const { signIn, signUp, confirmOtp } = useAuth();
   const [view, setView] = useState<AuthView>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [universityName, setUniversityName] = useState('');
-  const [universities, setUniversities] = useState<UniversityItem[]>([]);
   const [otp, setOtp] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [guestLoading, setGuestLoading] = useState(false);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (searchTimer.current) clearTimeout(searchTimer.current);
-    };
-  }, []);
-
-  const onUniversityChange = (value: string) => {
-    setUniversityName(value);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      searchUniversities(value)
-        .then(setUniversities)
-        .catch(() => setUniversities([]));
-    }, 250);
-  };
 
   const handleLogin = async () => {
     setError('');
@@ -76,6 +56,7 @@ export function AuthScreen() {
       const result = await signIn({ email: email.trim(), password });
       if (result.requiresVerification && result.email) {
         setEmail(result.email);
+        setOtp('');
         setView('verify');
       }
     } catch (err) {
@@ -102,26 +83,14 @@ export function AuthScreen() {
         lastName: lastName.trim(),
         email: email.trim(),
         password,
-        universityName: universityName.trim() || undefined,
       });
       setEmail(result.email);
+      setOtp('');
       setView('verify');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleGuest = async () => {
-    setError('');
-    setGuestLoading(true);
-    try {
-      await signInAsGuest();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start guest session');
-    } finally {
-      setGuestLoading(false);
     }
   };
 
@@ -144,6 +113,7 @@ export function AuthScreen() {
     setLoading(true);
     try {
       await forgotPassword(email.trim());
+      setOtp('');
       setView('reset-verify');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send reset code');
@@ -214,12 +184,6 @@ export function AuthScreen() {
                 </Pressable>
                 {error ? <Banner message={error} /> : null}
                 <PrimaryButton label={loading ? 'Signing in...' : 'Sign In'} onPress={() => void handleLogin()} loading={loading} />
-                <View style={styles.orRow}>
-                  <View style={styles.line} />
-                  <Text style={styles.or}>or</Text>
-                  <View style={styles.line} />
-                </View>
-                <OutlineButton label={guestLoading ? 'Starting guest session...' : 'Continue as Guest'} onPress={() => void handleGuest()} disabled={guestLoading} />
                 <Text style={styles.switchText}>
                   Don't have an account?{' '}
                   <Text style={styles.link} onPress={() => { setError(''); setView('signup'); }}>
@@ -243,12 +207,6 @@ export function AuthScreen() {
                 </View>
                 <TextField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="Enter your email" />
                 <TextField label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="At least 6 characters" />
-                <TextField label="University" value={universityName} onChangeText={onUniversityChange} placeholder="Start typing your university..." />
-                {universities.slice(0, 5).map((uni) => (
-                  <Pressable key={uni._id} onPress={() => { setUniversityName(uni.name); setUniversities([]); }} style={styles.uni}>
-                    <Text>{uni.name}</Text>
-                  </Pressable>
-                ))}
                 {error ? <Banner message={error} /> : null}
                 <PrimaryButton label={loading ? 'Creating account...' : 'Sign Up'} onPress={() => void handleSignup()} loading={loading} />
                 <Text style={styles.switchText}>
@@ -311,9 +269,70 @@ export function AuthScreen() {
   );
 }
 
+function extractOtpCode(raw: string): string {
+  const compact = raw.trim().replace(/[\s-]/g, '');
+  if (/^\d{6}$/.test(compact)) return compact;
+  const match = raw.match(/(?:^|\D)(\d{6})(?:\D|$)/);
+  return match?.[1] ?? '';
+}
+
 function OtpBoxes({ value, onChange }: { value: string; onChange: (next: string) => void }) {
   const refs = useRef<Array<TextInput | null>>([]);
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  valueRef.current = value;
+  onChangeRef.current = onChange;
   const digits = Array.from({ length: OTP_LENGTH }, (_, i) => value[i] ?? '');
+
+  useEffect(() => {
+    refs.current[0]?.focus();
+
+    const fillFromClipboard = async () => {
+      if (valueRef.current.length === OTP_LENGTH) return;
+      try {
+        const clip = await Clipboard.getStringAsync();
+        const code = extractOtpCode(clip);
+        if (code.length === OTP_LENGTH) onChangeRef.current(code);
+      } catch {
+        // iOS may block clipboard until the user pastes.
+      }
+    };
+
+    void fillFromClipboard();
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void fillFromClipboard();
+    });
+    const clipboard = Clipboard.addClipboardListener(() => {
+      void fillFromClipboard();
+    });
+    return () => {
+      appState.remove();
+      Clipboard.removeClipboardListener(clipboard);
+    };
+  }, []);
+
+  const applyInput = (raw: string, index: number) => {
+    const incoming = raw.replace(/\D/g, '');
+    if (incoming.length > 1) {
+      if (incoming.length >= OTP_LENGTH) {
+        onChange(incoming.slice(0, OTP_LENGTH));
+        refs.current[OTP_LENGTH - 1]?.focus();
+        return;
+      }
+      const chars = Array.from({ length: OTP_LENGTH }, (_, i) => value[i] ?? '');
+      incoming.split('').forEach((digit, offset) => {
+        if (index + offset < OTP_LENGTH) chars[index + offset] = digit;
+      });
+      onChange(chars.join('').slice(0, OTP_LENGTH));
+      refs.current[Math.min(index + incoming.length, OTP_LENGTH) - 1]?.focus();
+      return;
+    }
+
+    const chars = Array.from({ length: OTP_LENGTH }, (_, i) => value[i] ?? '');
+    chars[index] = incoming.slice(-1);
+    onChange(chars.join('').slice(0, OTP_LENGTH));
+    if (incoming && index < OTP_LENGTH - 1) refs.current[index + 1]?.focus();
+  };
 
   return (
     <View style={styles.otpRow}>
@@ -325,14 +344,21 @@ function OtpBoxes({ value, onChange }: { value: string; onChange: (next: string)
           }}
           value={digit}
           keyboardType="number-pad"
-          maxLength={1}
-          onChangeText={(text) => {
-            const nextDigit = text.replace(/\D/g, '').slice(-1);
-            const chars = digits.slice();
-            chars[index] = nextDigit;
-            const joined = chars.join('').slice(0, OTP_LENGTH);
-            onChange(joined);
-            if (nextDigit && index < OTP_LENGTH - 1) refs.current[index + 1]?.focus();
+          inputMode="numeric"
+          maxLength={OTP_LENGTH}
+          textContentType="oneTimeCode"
+          autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
+          importantForAutofill="yes"
+          autoCorrect={false}
+          selectTextOnFocus
+          onChangeText={(text) => applyInput(text, index)}
+          onKeyPress={({ nativeEvent }) => {
+            if (nativeEvent.key === 'Backspace' && !digit && index > 0) {
+              const chars = Array.from({ length: OTP_LENGTH }, (_, i) => value[i] ?? '');
+              chars[index - 1] = '';
+              onChange(chars.join(''));
+              refs.current[index - 1]?.focus();
+            }
           }}
           style={styles.otp}
         />
@@ -343,26 +369,27 @@ function OtpBoxes({ value, onChange }: { value: string; onChange: (next: string)
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
-  scroll: { flexGrow: 1, justifyContent: 'flex-end', paddingHorizontal: 24, paddingBottom: 28, paddingTop: 24 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 28 },
   brand: { alignItems: 'center', marginBottom: 28 },
   logo: { width: 56, height: 56, borderRadius: 16, backgroundColor: colors.olive, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   logoMark: { color: colors.white, fontSize: 24, fontWeight: '800' },
   brandName: { fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
-  heading: { fontSize: 32, fontWeight: '800', color: colors.text, marginBottom: 6, letterSpacing: -0.8 },
-  sub: { fontSize: 16, color: colors.textMuted, marginBottom: 24, lineHeight: 22 },
+  heading: { fontSize: 32, fontWeight: '800', color: colors.text, marginBottom: 6, letterSpacing: -0.8, textAlign: 'center' },
+  sub: { fontSize: 16, color: colors.textMuted, marginBottom: 24, lineHeight: 22, textAlign: 'center' },
   row: { flexDirection: 'row', gap: 10 },
-  linkWrap: { alignSelf: 'flex-end', marginBottom: 12 },
+  linkWrap: { alignSelf: 'center', marginBottom: 12, marginTop: 4 },
   link: { color: colors.orange, fontWeight: '700' },
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
   line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.divider },
   or: { fontSize: 12, color: colors.textMuted },
   switchText: { marginTop: 18, textAlign: 'center', color: colors.textMuted },
-  uni: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider },
   otpRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   otp: {
     width: 46,
     height: 54,
     backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: '#C9C4B8',
     borderRadius: 12,
     textAlign: 'center',
     fontSize: 20,
