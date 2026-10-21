@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUnreadNotificationsCount } from '../api';
@@ -18,10 +18,8 @@ import { ExportScreen, HomeScreen as WelcomeHome, SettingsScreen, StoryboardsScr
 import { SharedItemScreen } from './dashboard/SharedItemScreen';
 import {
   CollaborationDetailScreen,
-  CollaborationScreen,
   NotificationsScreen,
   SharedScreen,
-  StarredScreen,
 } from './dashboard/SocialScreens';
 
 export function DashboardScreen({ onReplayOnboarding }: { onReplayOnboarding: () => void }) {
@@ -35,6 +33,15 @@ export function DashboardScreen({ onReplayOnboarding }: { onReplayOnboarding: ()
   useEffect(() => {
     getUnreadNotificationsCount().then(setUnread).catch(() => setUnread(0));
   }, [route]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setMenuOpen(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [menuOpen]);
 
   return (
     <View style={styles.screen}>
@@ -69,7 +76,7 @@ export function DashboardScreen({ onReplayOnboarding }: { onReplayOnboarding: ()
         </Pressable>
       </View>
 
-      <View style={styles.body}>{renderRoute(route)}</View>
+      <View style={[styles.body, !showTabs && { paddingBottom: insets.bottom }]}>{renderRoute(route)}</View>
 
       {showTabs ? (
         <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
@@ -100,7 +107,7 @@ function renderRoute(route: ReturnType<typeof useNavigation>['route']) {
     case 'home':
       return <WelcomeHome />;
     case 'library':
-      return <LibraryScreen />;
+      return <LibraryScreen initialFilter={route.filter} />;
     case 'journals':
       return <JournalsScreen initialMode={route.mode} />;
     case 'journal':
@@ -120,9 +127,9 @@ function renderRoute(route: ReturnType<typeof useNavigation>['route']) {
     case 'shared':
       return <SharedScreen />;
     case 'starred':
-      return <StarredScreen />;
+      return <LibraryScreen initialFilter="Starred" />;
     case 'collaboration':
-      return <CollaborationScreen />;
+      return <LibraryScreen initialFilter="Collaboration" />;
     case 'collaboration-journal':
       return <CollaborationDetailScreen journalId={route.journalId} />;
     case 'storyboards':

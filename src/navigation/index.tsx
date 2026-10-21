@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { BackHandler } from 'react-native';
 
 export type AppRoute =
   | { name: 'home' }
-  | { name: 'library' }
+  | { name: 'library'; filter?: 'All Content' | 'Write-ups' | 'Docs' | 'Images' | 'Audio' | 'Video' | 'Starred' | 'Collaboration' }
   | { name: 'journals'; mode?: 'write' | 'voice' | 'upload' }
   | { name: 'journal'; id: string }
   | { name: 'ideas' }
@@ -25,6 +26,11 @@ export type AppRoute =
 
 export type TabKey = 'home' | 'library' | 'journals' | 'friends';
 
+type StackEntry = {
+  route: AppRoute;
+  showHeaderBack: boolean;
+};
+
 type NavigationContextValue = {
   route: AppRoute;
   stack: AppRoute[];
@@ -36,21 +42,82 @@ type NavigationContextValue = {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
+const DETAIL_ROUTES = new Set<AppRoute['name']>([
+  'journal',
+  'idea',
+  'idea-new',
+  'brainstorm-space',
+  'shared-item',
+  'collaboration-journal',
+  'create-video',
+]);
+
+function isSameRoute(a: AppRoute, b: AppRoute): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const [stack, setStack] = useState<AppRoute[]>([{ name: 'home' }]);
-  const route = stack[stack.length - 1] ?? { name: 'home' };
+  const [entries, setEntries] = useState<StackEntry[]>([
+    { route: { name: 'home' }, showHeaderBack: false },
+  ]);
+  const current = entries[entries.length - 1] ?? { route: { name: 'home' }, showHeaderBack: false };
+  const route = current.route;
 
   const push = useCallback((next: AppRoute) => {
-    setStack((prev) => [...prev, next]);
+    setEntries((prev) => [...prev, { route: next, showHeaderBack: true }]);
   }, []);
 
   const replace = useCallback((next: AppRoute) => {
-    setStack([next]);
+    setEntries((prev) => {
+      const top = prev[prev.length - 1];
+      if (top && isSameRoute(top.route, next)) {
+        return prev;
+      }
+      if (DETAIL_ROUTES.has(next.name)) {
+        const base = prev.length > 0 ? prev.slice(0, -1) : [{ route: { name: 'home' as const }, showHeaderBack: false }];
+        return [...base, { route: next, showHeaderBack: true }];
+      }
+      if (next.name === 'home') {
+        return [{ route: { name: 'home' }, showHeaderBack: false }];
+      }
+      const withoutPushed = prev.filter((item) => !item.showHeaderBack);
+      const base = withoutPushed.length > 0 ? withoutPushed : [{ route: { name: 'home' as const }, showHeaderBack: false }];
+      const lastBase = base[base.length - 1];
+      if (lastBase && isSameRoute(lastBase.route, next)) {
+        return base;
+      }
+      return [...base, { route: next, showHeaderBack: false }];
+    });
   }, []);
 
   const back = useCallback(() => {
-    setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+    setEntries((prev) => {
+      if (prev.length > 1) {
+        return prev.slice(0, -1);
+      }
+      if (prev[0]?.route.name !== 'home') {
+        return [{ route: { name: 'home' }, showHeaderBack: false }];
+      }
+      return prev;
+    });
   }, []);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (entries.length > 1) {
+        back();
+        return true;
+      }
+      if (route.name !== 'home') {
+        back();
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [entries.length, route.name, back]);
+
+  const stack = useMemo(() => entries.map((e) => e.route), [entries]);
 
   const value = useMemo(
     () => ({
@@ -59,9 +126,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       push,
       replace,
       back,
-      canGoBack: stack.length > 1,
+      canGoBack: current.showHeaderBack,
     }),
-    [route, stack, push, replace, back]
+    [route, stack, push, replace, back, current.showHeaderBack]
   );
 
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;

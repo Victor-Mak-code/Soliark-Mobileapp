@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -46,6 +47,17 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     });
     setIndex(nextIndex);
   };
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (index > 0) {
+        goTo(index - 1);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [index, cardWidth]);
 
   const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(event.nativeEvent.contentOffset.x / cardWidth);

@@ -25,9 +25,7 @@ export type MenuKey =
   | 'brainstorm'
   | 'storyboards'
   | 'shared'
-  | 'starred'
   | 'friends'
-  | 'collaboration'
   | 'export'
   | 'subscription'
   | 'notifications'
@@ -41,9 +39,7 @@ const MENU_ITEMS: { key: MenuKey; label: string; icon: keyof typeof Ionicons.gly
   { key: 'brainstorm', label: 'Brainstorm', icon: 'sparkles-outline' },
   { key: 'storyboards', label: 'Storyboards', icon: 'grid-outline' },
   { key: 'shared', label: 'Shared with Me', icon: 'share-outline' },
-  { key: 'starred', label: 'Starred', icon: 'star-outline' },
   { key: 'friends', label: 'Friends', icon: 'people-outline' },
-  { key: 'collaboration', label: 'Collaboration', icon: 'person-add-outline' },
   { key: 'export', label: 'Export & Sharing', icon: 'download-outline' },
   { key: 'subscription', label: 'Subscription', icon: 'card-outline' },
   { key: 'notifications', label: 'Notifications', icon: 'notifications-outline' },

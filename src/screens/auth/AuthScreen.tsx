@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   AppState,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -44,6 +45,28 @@ export function AuthScreen() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (view === 'reset') {
+        setError('');
+        setView('reset-verify');
+        return true;
+      }
+      if (view === 'reset-verify') {
+        setError('');
+        setView('forgot');
+        return true;
+      }
+      if (view !== 'login') {
+        setError('');
+        setView('login');
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [view]);
 
   const handleLogin = async () => {
     setError('');

@@ -71,9 +71,21 @@ export function HomeScreen() {
         ))}
       </View>
       <View style={styles.stats}>
-        <Stat value={String(stats.journals)} label="Journals" />
-        <Stat value={String(stats.videos)} label="Videos" />
-        <Stat value={String(stats.starred)} label="Starred" />
+        <Stat
+          value={String(stats.journals)}
+          label="Journals"
+          onPress={() => replace({ name: 'library', filter: 'All Content' })}
+        />
+        <Stat
+          value={String(stats.videos)}
+          label="Videos"
+          onPress={() => replace({ name: 'library', filter: 'Video' })}
+        />
+        <Stat
+          value={String(stats.starred)}
+          label="Starred"
+          onPress={() => replace({ name: 'library', filter: 'Starred' })}
+        />
       </View>
       <Pressable onPress={() => replace({ name: 'subscription' })} style={styles.premium}>
         <Text style={styles.premiumTitle}>Go Premium</Text>
@@ -83,12 +95,25 @@ export function HomeScreen() {
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function Stat({
+  value,
+  label,
+  onPress,
+}: {
+  value: string;
+  label: string;
+  onPress?: () => void;
+}) {
   return (
-    <View style={styles.stat}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${value} ${label}`}
+      style={({ pressed }) => [styles.stat, pressed && { opacity: 0.85 }]}
+    >
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.meta}>{label}</Text>
-    </View>
+    </Pressable>
   );
 }
 
